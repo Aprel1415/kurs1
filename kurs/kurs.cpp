@@ -24,6 +24,7 @@ struct Session {
 };
 
 struct Student {
+    int sessioncount;
     Session session[9];
     Initials Name;
     char Date[100];
@@ -145,6 +146,7 @@ void EditStudent() {
 
 void EnterSt() {
     Student student;
+    
     cout << "Введите имя:\n";
     cin >> student.Name.Name;
     cout << "Введите фамилию:\n";
@@ -166,13 +168,20 @@ void EnterSt() {
     cin >> student.ID;
     cout << "Введите пол:\n";
     cin >> student.Sex;
-    cout << "Введите количество сессий:\n";
-    cin >> student.session->Semester;
-    cout << "Введите название предмета:\n";
-    getchar();
-    gets_s(student.Success.SubjectName);
-    cout << "Введите оценку по предмету:\n";
-    cin >> student.Success.Mark;
+    cout << "Введите количество сданных сессий (максимум 9):\n";
+    cin >> student.sessioncount;
+    for (int i = 0; i < student.sessioncount; i++) {
+        student.session[i].Semester = i + 1;
+        cout << "Введите количество предметов в " << i + 1 << "-й сессии (Максимум 10)\n";
+        cin >> student.session[i].SubjectsCount;
+        for (int j = 0; j < student.session[i].SubjectsCount; j++) {
+            cout << "Введите название " << j + 1 << "-го предмета в " << i + 1 << "-й сессии\n";
+            getchar();
+            gets_s (student.session[i].Subjects[j].SubjectName);
+            cout << "Введите оценку за " << j + 1 << "-й предмет в " << i + 1 << "-й сессии\n";
+            cin >> student.session[i].Subjects[j].Mark;
+        }
+    }
     ofstream Bazadannih("C:/nigga/Baza.bin", ios::binary | ios::app);
     Bazadannih.write((char*)&student, sizeof(student));
     Bazadannih.close();
@@ -180,9 +189,29 @@ void EnterSt() {
 
 void niggavivod() {
     vector <Student> students = ReadData();
+    Student student;
     for (int i = 0; i < students.size(); i++)
+        //фор для вывода сессий
     {
-        cout << "Студент номер: " << i + 1 << endl << "Фамилия: " << students[i].Name.Surname << endl << "Имя: " << students[i].Name.Name << endl << "Отчество: " << students[i].Name.FathersName << endl << "Дата рождения: " << students[i].Date << endl << "Дата поступления: " << students[i].JoinYear << endl << "Факультет: " << students[i].Fuckultet << endl << "Кафедра: " << students[i].Kafedra << endl << "Группа: " << students[i].Group << endl << "Студенческий билет: " << students[i].ID << endl << "Пол: " << students[i].Sex << endl << "Количество сессий:" << students[i].session->Semester << endl << "Предмет: " << students[i].Success.SubjectName << endl << "Оценка по предмету выше: " << students[i].Success.Mark << endl << endl;
+        cout << "Студент номер: " << i + 1 << endl;
+        cout << "Фамилия: " << students[i].Name.Surname << endl;
+        cout << "Имя: " << students[i].Name.Name << endl;
+        cout << "Отчество: " << students[i].Name.FathersName << endl;
+        cout << "Дата рождения: " << students[i].Date << endl;
+        cout << "Дата поступления: " << students[i].JoinYear << endl;
+        cout << "Факультет: " << students[i].Fuckultet << endl;
+        cout << "Кафедра: " << students[i].Kafedra << endl;
+        cout << "Группа: " << students[i].Group << endl;
+        cout << "Студенческий билет: " << students[i].ID << endl;
+        cout << "Пол: " << students[i].Sex << endl;
+        for (int j = 0; j < students[i].sessioncount; j++) {
+            students[i].session[j].Semester = j + 1;
+            cout << "Номер сессии: " << students[i].session[j].Semester << endl;
+            for (int k = 0; k < students[i].session[j].SubjectsCount; k++) {
+                cout << "Название предмета в этой сессии: " << students[i].session[j].Subjects[k].SubjectName << endl;
+                cout << "Оценка по этому предмету: " << students[i].session[j].Subjects[k].Mark << endl;
+            }
+        }
     }
 }
 
@@ -205,17 +234,16 @@ void InMain() {
     while (true) {
         int a;
         cout << "1-> Добавить студента\n";
-        cout << "2-> Вывод всех студентов\n";
+        cout << "2-> Редакция студентов\n";
         cout << "3-> Удаление всех студентов\n";
         cout << "4-> Поиск студента по студенческому билету\n";
-        cout << "5-> Редакция студентов\n";
+        cout << "5-> Вывод всех студентов\n";
         cin >> a;
         if (a == 1) {
             EnterSt();
-
         }
         if (a == 2) {
-            niggavivod();
+            EditStudent(); niggavivod();
         }
         if (a == 3) {
             Delete();
@@ -227,7 +255,7 @@ void InMain() {
             cout << "Данный номер студенческого билета принадлежит студенту номер: " << Search(StudakNum) << endl << endl;
         }
         if (a == 5) {
-            EditStudent();
+            niggavivod(); 
         }
     }
 }
@@ -241,6 +269,5 @@ int main()
 {
     Lang();
     InMain();
-    //Фигня какая то с добавлением предметов и оценок по ним, а также какая то суета с семестрами.
 }
 
