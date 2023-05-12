@@ -8,19 +8,21 @@
 #include <type_traits>
 #include <typeinfo>
 #include <cstring>
+
 #ifndef _MSC_VER
 #include <cxxabi.h>
 #endif
+
 #include <memory>
 #include <string>
 #include <cstdlib>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>
-
+#include <algorithm>
 #include "Source.cpp"
 
-#define string List<char>
+#define String List<char>
 
 using namespace std;
 
@@ -105,9 +107,70 @@ return students;
 }
 */
 
+void Decrypt() {
+    char* password=new char[64];
+    string command = "OpenSSL-Win64\\bin\\openssl.exe rsautl -decrypt -inkey rsa.private -in key.txt.enc -out key.txt";
+    system(command.c_str());
 
-template <typename K>
-K GetValue(K& value) {
+    if (remove("key.txt.enc") != 0) {
+        cout << "deleting key error 1\n";
+    }
+
+    ifstream file("key.txt");
+    file >> password;
+    file.close();
+    if (remove("key.txt") != 0) {
+        cout << "deleting key error 2\n";
+    }
+
+    command = "OpenSSL-Win64\\bin\\openssl.exe aes-256-cbc -salt -a -d -in Bazadannih.bin.enc -out Bazadannih.bin -pass pass:";
+    command += password;
+    system(command.c_str());
+
+    if (remove("Bazadannih.bin.enc")) {
+        cout << "deleting db error;\n";
+    }
+}
+
+void Crypt() {
+    char* password=new char[64];
+    srand(time(NULL));
+    for (int i = 0; i < 64; ++i) {
+        switch (rand() % 3) {
+            case 0:
+                password[i] = rand() % 10 + '0';
+                break;
+            case 1:
+                password[i] = rand() % 26 + 'A';
+                break;
+            case 2:
+                password[i] = rand() % 26 + 'a';
+        }
+    }
+
+    string command = "OpenSSL-Win64\\bin\\openssl.exe aes-256-cbc -salt -a -e -in Bazadannih.bin -out Bazadannih.bin.enc -pass pass:";
+    command += password;
+    system(command.c_str());
+
+    if (remove("Bazadannih.bin")) {
+        cout << "deleting db error;\n";
+    }
+
+    ofstream file("key.txt");
+    file << password;
+    file.close();
+
+    command = "OpenSSL-Win64\\bin\\openssl.exe rsautl -encrypt -inkey rsa.public -pubin -in key.txt -out key.txt.enc";
+    system(command.c_str());
+
+    if (remove("key.txt") != 0) {
+        cout << "deleting key error\n";
+    }
+}
+
+
+template<typename K>
+K GetValue(K &value) {
     while (!(cin >> value) || (cin.peek() != '\n')) {
         cin.clear();
         while (cin.get() != '\n');
@@ -134,50 +197,34 @@ bool DateCheck(int choice, int value) {
             if ((value > 31) || (value < 1)) {
                 return false;
             }
-            else {
                 return value;
-            }
         case 2:
             if ((value > 12) || (value < 1)) {
                 return false;
             }
-            else {
-                return value;
-            }
+            return value;
         case 3:
             if ((value > 2005) || (value < 1933)) {
                 return false;
             }
-            else {
                 return value;
-            }
     }
 }
-/*
-int DataChecker(int a, int value) {
-b3: GetValue(value);
-if (DateCheck(a, value) == false) {
-cout « "Значение больше или меньше, чем это возможно!\n";
-goto b3;
-}
-return value;
-}
-*/
 
 bool correctName(char value[]) {
-    string badChars = "0123456789,./|№;:?!@#$%^&*()_+==*-<>'~{}[]";
+    String badChars = "0123456789,./|№;:?!@#$%^&*()_+==*-<>'~{}[]";
     for (int i = 0; i < strlen(value); i++) {
         if (badChars.contains(value[i])) return false;
     }
 }
 
-List <Student> ReadData() {
+List<Student> ReadData() {
     ifstream file(PATH, ios::binary);
     Student student;
 
     List<Student> students;
 
-    for (int i = 0; file.read((char*)&student, sizeof(student)); i++) {
+    for (int i = 0; file.read((char *) &student, sizeof(student)); i++) {
         students.add(student);
     }
     file.close();
@@ -185,10 +232,21 @@ List <Student> ReadData() {
 }
 
 void Delete() {
-    const char* filename = PATH;
+    const char *filename = PATH;
     remove(filename);
-    system("cls");
+//    system("cls");
     cout << "Все студенты успешно удалены!\n";
+}
+
+void SortByAlph(List<Student> &students) {
+    sort(students.begin(), students.end(), [](Student const s1, Student const s2) -> bool {
+
+        for (int i = 0; i < min(strlen(s1.Surname), strlen(s2.Surname)); i++) {
+            if (s1.Surname[i] == s2.Surname[i]) continue;
+            return s1.Surname[i] < s2.Surname[i];
+        }
+        return strlen(s1.Surname) < strlen(s2.Surname);
+    });
 }
 
 
@@ -196,15 +254,13 @@ void Delete() {
 void PrintDate(unsigned short day, unsigned short month, unsigned short year) {
     if (day < 10) {
         cout << "0" << day;
-    }
-    else {
+    } else {
         cout << day;
     }
     cout << ".";
     if (month < 10) {
         cout << "0" << month;
-    }
-    else {
+    } else {
         cout << month;
     }
     cout << ".";
@@ -220,11 +276,12 @@ void DrawLine(int value) {
 
 void AddStudent(List<Student> students) {
     ofstream Bazadannih(PATH, ios::binary | ios::app);
-    for (auto& student : students) {
-        Bazadannih.write((char*)&student, sizeof(student));
+    for (auto &student: students) {
+        Bazadannih.write((char *) &student, sizeof(student));
     }
     Bazadannih.close();
 }
+
 void DeleteOne(int id) {
     List<Student> students = ReadData();
     students.remove(id);
@@ -241,38 +298,44 @@ void EnterSt() {
     Student student = {};
 
     cout << "Введите имя:\n";
-    a1: cin >> student.Name;
+    a1:
+    cin >> student.Name;
     if (correctName(student.Name) == false) {
         cout << "В имени могут быть только буквы!\n";
         goto a1;
     };
     cout << "Введите фамилию:\n";
-    a2: cin >> student.Surname;
+    a2:
+    cin >> student.Surname;
     if (correctName(student.Surname) == false) {
         cout << "В фамилии могут быть только буквы!\n";
         goto a2;
     };
     cout << "Введите отчество:\n";
-    a3: cin >> student.FathersName;
+    a3:
+    cin >> student.FathersName;
     if (correctName(student.FathersName) == false) {
         cout << "В отчестве могут быть только буквы!\n";
         goto a3;
     };
     cout << "Введите дату рождения:\n";
     cout << "Введите день » ";
-    b1: GetValue(student.date.day);
+    b1:
+    GetValue(student.date.day);
     if (DateCheck(1, student.date.day) == false) {
         cout << "Значение больше или меньше, чем это возможно!\n";
         goto b1;
     }
     cout << "Введите месяц » ";
-    b2: GetValue(student.date.month);
+    b2:
+    GetValue(student.date.month);
     if (DateCheck(2, student.date.month) == false) {
         cout << "Значение больше или меньше, чем это возможно!\n";
         goto b2;
     }
     cout << "Введите год » ";
-    b3: GetValue(student.date.year);
+    b3:
+    GetValue(student.date.year);
     if (DateCheck(3, student.date.year) == false) {
         cout << "Значение больше или меньше, чем это возможно!\n";
         goto b3;
@@ -307,9 +370,9 @@ void EnterSt() {
         }
     }
     ofstream Bazadannih(PATH, ios::binary | ios::app);
-    Bazadannih.write((char*)&student, sizeof(student));
+    Bazadannih.write((char *) &student, sizeof(student));
     Bazadannih.close();
-    system("cls");
+//    system("cls");
     cout << "Студент успешно добавлен!\n";
 }
 
@@ -325,53 +388,18 @@ void SessionChanges(int a, int k) {
 
 }
 
-
-/*
-void StudWrite() {
-List<Student> students = ReadData();
-Student student = {};
-if (!students.size()) {
-system("cls");
-cout « "Студентов в базе данных нет!\n";
-}
-else {
-system("cls");
-for (int i = 0; i < students.size(); i++)
-{
-DrawLine(65);
-cout « i + 1 « " Студент" « endl;
-cout « "ФИО: " « students[i].Surname « " " « students[i].Name « " " « students[i].FathersName « endl;
-cout « "Пол: " « students[i].Sex « " | ";
-//cout « "Дата рождения: " « students[i].Date « endl;
-cout « "Год поступления: " « students[i].JoinYear « " | ";
-cout « "Номер зачётной книжки: " « students[i].ID « endl;
-cout « "Факультет: " « students[i].Fuckultet « " | ";
-cout « "Кафедра: " « students[i].Kafedra « endl;
-cout « "Группа: " « students[i].Group « endl;
-for (int j = 0; j < students[i].sessioncount; j++) {
-students[i].session[j].Semester = j + 1;
-cout « " " « students[i].session[j].Semester « " Семестр:" « endl;
-for (int k = 0; k < students[i].session[j].SubjectsCount; k++) {
-cout « " " « students[i].session[j].Subjects[k].SubjectName « ": " «
-students[i].session[j].Subjects[k].Mark « endl;
-}
-}
-}
-}
-}
-*/
 void StudWrite(int choice) {
     List<Student> students = ReadData();
     Student student = {};
     if (!students.size()) {
-        system("cls");
+//        system("cls");
         cout << "Студентов в базе данных нет!\n";
-    }
-    else {
-        system("cls");
+    } else {
+//        system("cls");
         DrawLine(65);
         cout << choice << " Студент" << endl;
-        cout << "ФИО: " << students[choice - 1].Surname << " " << students[choice - 1].Name << " " << students[choice - 1].FathersName << endl;
+        cout << "ФИО: " << students[choice - 1].Surname << " " << students[choice - 1].Name << " "
+             << students[choice - 1].FathersName << endl;
         cout << "Пол: " << students[choice - 1].Sex << " | ";
         cout << "Дата рождения: ";
         PrintDate(students[choice - 1].date.day, students[choice - 1].date.month, students[choice - 1].date.year);
@@ -385,11 +413,13 @@ void StudWrite(int choice) {
             students[choice - 1].session[j].Semester = j + 1;
             cout << " " << students[choice - 1].session[j].Semester << " Семестр:" << endl;
             for (int k = 0; k < students[choice - 1].session[j].SubjectsCount; k++) {
-                cout << " " << students[choice - 1].session[j].Subjects[k].SubjectName << ": " << students[choice - 1].session[j].Subjects[k].Mark << endl;
+                cout << " " << students[choice - 1].session[j].Subjects[k].SubjectName << ": "
+                     << students[choice - 1].session[j].Subjects[k].Mark << endl;
             }
         }
     }
 }
+
 
 void EditStudent(int k) {
     int p, a;
@@ -401,14 +431,14 @@ void EditStudent(int k) {
     int izmen;
     List<Student> students = ReadData();
     if (!students.size()) {
-        system("cls");
+//        system("cls");
         cout << "Студентов в базе данных нет!\n";
-    }
-    else {
-        system("cls");
+    } else {
+//        system("cls");
         StudWrite(k);
         cout << "Введите номер параметра, который необходимо изменить:\n";
-        cout << "1. Имя\n2. Фамилия\n3. Отчество\n4. Дата рождения\n5. Год поступления\n6. Факультет\n7. Кафедра\n8. Группа\n9. Студенческий билет\n10. Пол\n11. Изменить данные о сессии\n12. Добавить предмет к сессии\n";
+        cout
+                << "1. Имя\n2. Фамилия\n3. Отчество\n4. Дата рождения\n5. Год поступления\n6. Факультет\n7. Кафедра\n8. Группа\n9. Студенческий билет\n10. Пол\n11. Изменить данные о сессии\n12. Добавить предмет к сессии\n13. Добавить сессию\n";
         cin >> p;
 
         switch (p) {
@@ -427,19 +457,22 @@ void EditStudent(int k) {
             case 4:
                 cout << "Введите новую дату рождения студента:\n";
                 cout << "Введите день » ";
-            b1: GetValue(students[k - 1].date.day);
+            b1:
+                GetValue(students[k - 1].date.day);
                 if (DateCheck(1, students[k - 1].date.day) == false) {
                     cout << "Значение больше или меньше, чем это возможно!\n";
                     goto b1;
                 }
                 cout << "Введите месяц » ";
-            b2: GetValue(students[k - 1].date.month);
+            b2:
+                GetValue(students[k - 1].date.month);
                 if (DateCheck(2, students[k - 1].date.month) == false) {
                     cout << "Значение больше или меньше, чем это возможно!\n";
                     goto b2;
                 }
                 cout << "Введите год » ";
-            b3: GetValue(students[k - 1].date.year);
+            b3:
+                GetValue(students[k - 1].date.year);
                 if (DateCheck(3, students[k - 1].date.year) == false) {
                     cout << "Значение больше или меньше, чем это возможно!\n";
                     goto b3;
@@ -482,6 +515,24 @@ void EditStudent(int k) {
                 cout << "Введите новую оценку по предмету студента:\n";
                 cin >> students[k - 1].session[sessionnum - 1].Subjects[izmen - 1].Mark;
                 break;
+            case 13:
+                int i;
+                i = students[k - 1].sessioncount++;
+                cout << "Введите количество предметов в " << i + 1 << "-й сессии (Максимум 10)\n";
+                cin >> students[k - 1].session[i].SubjectsCount;
+                for (int j = 0; j < students[k - 1].session[i].SubjectsCount; j++) {
+                    cout << "Введите название " << j + 1 << "-го предмета в " << i + 1 << "-й сессии\n";
+                    getchar();
+                    gets_s(students[k - 1].session[i].Subjects[j].SubjectName);
+                    cout << "Введите оценку за " << j + 1 << "-й предмет в " << i + 1 << "-й сессии\n";
+                    ots:
+                    cin >> students[k - 1].session[i].Subjects[j].Mark;
+                    if (students[k - 1].session[i].Subjects[j].Mark > 5 ||
+                        students[k - 1].session[i].Subjects[j].Mark < 3) {
+                        cout << "Оценка может быть только 3, 4 или 5\n";
+                        goto ots;
+                    }
+                }
             case 12:
                 cout << "Введите номер сессии:\n";
                 cin >> sessionnum;
@@ -489,33 +540,31 @@ void EditStudent(int k) {
                 sessionparam = 1;
                 switch (sessionparam) {
                     case 1:
-                    cout << "Введите название предмета:\n";
-                    cin >> students[k - 1].session[sessionnum - 1].Subjects[subjcount].SubjectName;
-                    cout << "Введите оценку за предмет:\n";
-                    cin >> students[k - 1].session[sessionnum - 1].Subjects[subjcount].Mark;
-                    break;
-                }
+                        cout << "Введите название предмета:\n";
+                        cin >> students[k - 1].session[sessionnum - 1].Subjects[subjcount].SubjectName;
+                        cout << "Введите оценку за предмет:\n";
+                        cin >> students[k - 1].session[sessionnum - 1].Subjects[subjcount].Mark;
+                        break;
 
+                }
         }
-        system("cls");
+//        system("cls");
         cout << "Изменения успешно внесены!\n";
         FileChanges(students);
     }
 }
 
 
-void StudWriteTable() {
-    List<Student> students = ReadData();
+void StudWriteTable(List<Student> students = ReadData()) {
     Student student = {};
     int a;
     int b;
     int count = 0;
     if (!students.size()) {
-        system("cls");
+//        system("cls");
         cout << "Студентов в базе данных нет!\n";
-    }
-    else {
-        system("cls");
+    } else {
+//        system("cls");
         cout << "Введите '1', чтобы узнать подробную информацию о студенте.\n";
         cout << "Введите '2', чтобы редактировать данные о студенте.\n";
         cout << "Введите '3', чтобы удалить данные о студенте.\n";
@@ -524,7 +573,10 @@ void StudWriteTable() {
         cout << "|n/n|" << setw(26) << "ФИО Студента" << setw(44) << "|Дата рождения|Номер зачётки|" << endl;
         DrawLine(75);
         for (int i = 0; i < students.size(); i++) {
-            cout << "|" << setw(2) << i + 1 << " |" << students[i].Surname << " " << students[i].Name << " " << students[i].FathersName << setw(40 - strlen(students[i].Surname) - strlen(students[i].Name) - strlen(students[i].FathersName)) << "|";
+            cout << "|" << setw(2) << i + 1 << " |" << students[i].Surname << " " << students[i].Name << " "
+                 << students[i].FathersName
+                 << setw(40 - strlen(students[i].Surname) - strlen(students[i].Name) - strlen(students[i].FathersName))
+                 << "|";
             PrintDate(students[i].date.day, students[i].date.month, students[i].date.year);
             cout << setw(4) << "|" << students[i].ID << setw(14 - strlen(students[i].ID)) << "|" << endl;
             DrawLine(75);
@@ -537,12 +589,12 @@ void StudWriteTable() {
                 count = students.size();
                 cout << "Введите порядковый номер студента, чтобы узнать подробную информацию.\n";
                 cout << "» ";
-            x1: cin >> a;
+            x1:
+                cin >> a;
                 if (a > count || a < 0) {
                     cout << "Студента с таким порядковым номером нет в базе!\n";
                     goto x1;
-                }
-                else {
+                } else {
                     StudWrite(a);
                 }
                 break;
@@ -551,12 +603,12 @@ void StudWriteTable() {
                 count = students.size();
                 cout << "Введите порядковый номер студента, данные о котором необходимо изменить.\n";
                 cout << "» ";
-            x2: cin >> a;
+            x2:
+                cin >> a;
                 if (a > count || a < 0) {
                     cout << "Студента с таким порядковым номером нет в базе!\n";
                     goto x2;
-                }
-                else {
+                } else {
                     EditStudent(a);
                 }
                 break;
@@ -565,35 +617,66 @@ void StudWriteTable() {
                 count = students.size();
                 cout << "Введите порядковый номер студента, данные о котором необходимо удалить\n";
                 cout << "» ";
-            x3: cin >> a;
+            x3:
+                cin >> a;
                 if (a > count || a < 0) {
                     cout << "Студента с таким порядковым номером нет в базе!\n";
                     goto x3;
-                }
-                else {
+                } else {
                     DeleteOne(a - 1);
-                    system("cls");
+//                    system("cls");
                     cout << "Студент успешно удалён!\n";
                 }
-                break;
-            default:
-                system("cls");
+              break;
+//            default:
+//                system("cls");
         }
     }
 }
 
-/*
-int Search(char StudakNum[]) {
-List<Student> students = ReadData();
-for (int i = 0; i < students.size(); i++) {
-if (!strcmp(StudakNum, students[i].ID)) {
-return i + 1;
-}
-}
-return 0;
-}
-*/
 
+
+void Dotask() {
+    List<Student> students = ReadData();
+    int data;
+    char pol[8];
+    bool hstud = false;
+    for (int i = 0; i < students.size(); i++) {
+        if (hstud) {
+            break;
+        }
+        for (int j = i + 1; j < students.size(); j++) {
+            if (students[i].JoinYear == students[j].JoinYear) {
+                data = students[i].JoinYear;
+                hstud = true;
+                break;
+            }
+        }
+    }
+    cout << "Введите пол:\n";
+    cin >> pol;
+    List<Student> SameStudentik;
+    List<Student> DiffStudentik;
+    for (int i = 0; i < students.size(); i++) {
+        if (::strcmp(pol, students[i].Sex))
+            break;
+        if (students[i].JoinYear == data) {
+            SameStudentik.add(students[i]);
+            continue;
+        }
+        DiffStudentik.add(students[i]);
+    }
+    SortByAlph(SameStudentik);
+    SortByAlph(DiffStudentik);
+    if(!SameStudentik.size()){
+        cout << "Таких студентов нет\n";
+    }
+    else {
+        cout << "Вот они, слево направо\n";
+        StudWriteTable(SameStudentik);
+    }
+    StudWriteTable(DiffStudentik);
+}
 
 int InMain() {
     while (true) {
@@ -604,11 +687,12 @@ int InMain() {
         cout << "1. Добавить студента\n";
         cout << "2. Удаление всех студентов\n";
         cout << "3. Вывод всех студентов\n";
+        cout << "4. Выполнить задание варианта 49\n";
         cout << "» ";
         GetValue(a);
         switch (a) {
             case 1:
-                system("cls");
+//                system("cls");
                 EnterSt();
                 break;
             case 2:
@@ -617,32 +701,25 @@ int InMain() {
             case 3:
                 StudWriteTable();
                 break;
+            case 4:
+                Dotask();
+                break;
             case 0:
                 return 0;
             default:
-                system("cls");
+//                system("cls");
                 cout << "Такого пункта в меню нет!\n";
         }
-        /*
-        if (a == 4) {
-        char StudakNum[100];
-        cout « "Введите искомый номер студенческого билета:\n" « endl;
-        cin » StudakNum;
-        // cout « "Данный номер студенческого билета принадлежит студенту номер: " « Search(StudakNum) « endl « endl;
-        }
-        */
+
     }
 }
 
-void
-Lang() {
+
+
+int main() {
+    Decrypt();
     SetConsoleCP(1251);
     SetConsoleOutputCP(1251);
-}
-
-int main()
-{
-    Lang();
     InMain();
-
+    Crypt();
 }
